@@ -1,0 +1,1 @@
+# gomod-version-lint
