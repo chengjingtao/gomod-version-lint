@@ -2,8 +2,8 @@ package scm
 
 import (
 	"context"
-	pkgctx "github.com/chengjingtao/gomod-version-lint/pkg/context"
 	gogithub "github.com/google/go-github/v53/github"
+	pkgctx "gomod.alauda.cn/gomod-version-lint/pkg/context"
 	"strings"
 )
 

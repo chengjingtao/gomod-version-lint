@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/chengjingtao/gomod-version-lint/cmd"
-	pkgctx "github.com/chengjingtao/gomod-version-lint/pkg/context"
 	"go.uber.org/zap"
+	"gomod.alauda.cn/gomod-version-lint/cmd"
+	pkgctx "gomod.alauda.cn/gomod-version-lint/pkg/context"
 	"os"
 )
 

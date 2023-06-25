@@ -1,4 +1,4 @@
-module github.com/chengjingtao/gomod-version-lint
+module gomod.alauda.cn/gomod-version-lint
 
 go 1.19
 

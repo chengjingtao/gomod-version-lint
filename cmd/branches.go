@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"context"
-	"github.com/chengjingtao/gomod-version-lint/options"
 	"github.com/spf13/cobra"
+	"gomod.alauda.cn/gomod-version-lint/options"
 )
 
 func NewBranchesCmd(ctx context.Context, opts *options.RootOptions) *cobra.Command {

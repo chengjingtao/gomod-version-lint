@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"github.com/chengjingtao/gomod-version-lint/options"
+	"gomod.alauda.cn/gomod-version-lint/options"
 
 	"github.com/spf13/cobra"
 )

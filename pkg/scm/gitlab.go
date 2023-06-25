@@ -2,7 +2,7 @@ package scm
 
 import (
 	"context"
-	pkgctx "github.com/chengjingtao/gomod-version-lint/pkg/context"
+	pkgctx "gomod.alauda.cn/gomod-version-lint/pkg/context"
 
 	gogitlab "github.com/xanzy/go-gitlab"
 	"strings"
