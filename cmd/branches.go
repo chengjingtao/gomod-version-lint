@@ -6,10 +6,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewBranchesCmd(ctx context.Context) *cobra.Command {
+func NewBranchesCmd(ctx context.Context, opts *options.RootOptions) *cobra.Command {
 
 	branchOpts := &options.BranchesOptions{
-		Context: ctx,
+		RootOptions: *opts,
+		Context:     ctx,
 	}
 
 	cmd := &cobra.Command{

@@ -1,22 +1,25 @@
 package main
 
 import (
+	"context"
 	"github.com/chengjingtao/gomod-version-lint/cmd"
+	pkgctx "github.com/chengjingtao/gomod-version-lint/pkg/context"
+	"go.uber.org/zap"
+	"os"
 )
 
 func main() {
-	cmd.Execute()
+	ctx := context.Background()
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	log := logger.Sugar()
 
-	//ctx := context.TODO()
-	//log, _ := zap.NewProduction()
-	//ctx = pkg.WithLogger(ctx, log.Sugar())
-	//
-	//res, err := pkg.BranchContains(ctx, "https://github.com/katanomi/builds", "e93ab8d")
-	//if err != nil {
-	//	fmt.Println(err)
-	//	os.Exit(1)
-	//}
-	//
-	//fmt.Println(res)
+	ctx = pkgctx.WithLogger(ctx, log)
 
+	rootCmd := cmd.NewRootCmd(ctx)
+	err := rootCmd.Execute()
+	if err != nil {
+		log.Error(err.Error())
+		os.Exit(1)
+	}
 }

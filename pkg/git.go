@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	pkgctx "github.com/chengjingtao/gomod-version-lint/pkg/context"
 	"golang.org/x/mod/modfile"
 	"io"
 	"os"
@@ -22,11 +23,27 @@ type ModRequireAnalysis struct {
 
 func ExcludeBranches(ctx context.Context, require []ModRequireAnalysis, branchExcludeRegex string) ([]ModRequireAnalysis, error) {
 
-	if branchExcludeRegex == "" {
-		return require, nil
+	res := []ModRequireAnalysis{}
+
+	for _, item := range require {
+		matched, err := BranchMatched(ctx, item, branchExcludeRegex)
+		if err != nil {
+			return nil, err
+		}
+
+		if !matched {
+			res = append(res, item)
+		}
 	}
 
-	res := []ModRequireAnalysis{}
+	return res, nil
+}
+
+func BranchMatched(ctx context.Context, require ModRequireAnalysis, branchExcludeRegex string) (bool, error) {
+
+	if branchExcludeRegex == "" {
+		return true, nil
+	}
 
 	regex := branchExcludeRegex
 	if !strings.HasSuffix(regex, "$") {
@@ -38,29 +55,23 @@ func ExcludeBranches(ctx context.Context, require []ModRequireAnalysis, branchEx
 
 	r, err := regexp.Compile(regex)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
-OUTLOOP:
-	for _, item := range require {
-		for _, branch := range item.Branches {
-			matched := r.MatchString(branch)
-			if matched {
-				continue OUTLOOP
-			}
+	for _, branch := range require.Branches {
+		matched := r.MatchString(branch)
+		if matched {
+			return true, nil
 		}
-
-		// not match branchExcludeRegex
-		res = append(res, item)
 	}
 
-	return res, nil
+	return false, nil
 }
 
-func BranchAnalysis(ctx context.Context, modules []modfile.Require) (require []ModRequireAnalysis) {
-	logger := GetLogger(ctx)
+func BranchAnalysis(ctx context.Context, modules []modfile.Require, concurrency int8) (require []ModRequireAnalysis) {
+	logger := pkgctx.GetLogger(ctx)
 
-	threshold := make(chan struct{}, 20)
+	threshold := make(chan struct{}, concurrency)
 	wg := sync.WaitGroup{}
 	require = []ModRequireAnalysis{}
 	requireLock := sync.RWMutex{}
@@ -100,12 +111,8 @@ func BranchAnalysis(ctx context.Context, modules []modfile.Require) (require []M
 	return require
 }
 
-func BranchContains(ctx context.Context, repoUrl string, commitID string) ([]string, error) {
-	return branchContains(ctx, repoUrl, commitID)
-}
-
 func branchContains(ctx context.Context, repoUrl string, commitID string) ([]string, error) {
-	logger := GetLogger(ctx)
+	logger := pkgctx.GetLogger(ctx)
 
 	dir := encodeRepoUrl(repoUrl)
 	logger.Debugf("mkdir /tmp/%s", dir)
@@ -123,16 +130,12 @@ func branchContains(ctx context.Context, repoUrl string, commitID string) ([]str
 		"./",
 	}
 
-	stdout, stderr, err := runCmd(ctx, tmp, "git", args...)
+	stdout, _, err := runCmd(ctx, tmp, "git", args...)
 	if err != nil {
 		return nil, err
 	}
 
-	if stderr != "" {
-		logger.Infof(stderr)
-	}
-
-	stdout, stderr, err = runCmd(ctx, tmp, "git", []string{
+	stdout, _, err = runCmd(ctx, tmp, "git", []string{
 		"branch",
 		"-q",
 		"-r",
@@ -142,10 +145,6 @@ func branchContains(ctx context.Context, repoUrl string, commitID string) ([]str
 
 	if err != nil {
 		return nil, err
-	}
-
-	if stderr != "" {
-		logger.Infof(stderr)
 	}
 
 	return parseStdoutOfBranchContains(stdout), nil
@@ -167,6 +166,9 @@ func parseStdoutOfBranchContains(stdout string) []string {
 			continue
 		}
 		branch := strings.TrimPrefix(item, "origin/")
+		if branch == "" {
+			continue
+		}
 
 		branches = append(branches, branch)
 	}
@@ -175,7 +177,7 @@ func parseStdoutOfBranchContains(stdout string) []string {
 }
 
 func runCmd(ctx context.Context, workdir, name string, args ...string) (stdout string, stderr string, err error) {
-	logger := GetLogger(ctx)
+	logger := pkgctx.GetLogger(ctx)
 
 	cmdStr := name + " " + strings.Join(args, " ")
 	logger.Infof("executing \"%s\" in \"%s\" \n", cmdStr, workdir)
@@ -191,8 +193,8 @@ func runCmd(ctx context.Context, workdir, name string, args ...string) (stdout s
 	cmd.Dir = workdir
 	stdoutBf := bytes.NewBufferString("")
 	stderrBf := bytes.NewBufferString("")
-	cmd.Stdout = stdoutBf
-	cmd.Stderr = stderrBf
+	cmd.Stdout = io.MultiWriter(os.Stdout, stdoutBf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, stderrBf)
 	err = cmd.Run()
 
 	if ctx.Err() != nil {
